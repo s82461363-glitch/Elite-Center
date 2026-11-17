@@ -165,16 +165,6 @@
     }
     .empty-state { text-align: center; padding: 28px 16px; color: var(--text-muted); font-size: 0.92rem; }
 
-    .item-card {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: all 0.2s;
-      cursor: pointer;
-    }
-    .item-card:hover { border-color: var(--primary); transform: translateY(-2px); }
-    .item-card:last-child { margin-bottom: 0; }
-    .item-card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
-    .item-card .meta { font-size: 0.82rem; color: var(--text-muted); }
-
     .search-box { margin-bottom: 14px; }
     .search-box input {
       width: 100%;
@@ -766,11 +756,11 @@
             (exam.questions || []).forEach((q, qIdx) => {
               html += `<p class="exam-question">${qIdx + 1}. ${q.text}</p>`;
               (q.options || []).forEach((opt, oIdx) => {
-                html += `<label class="exam-option"><input type="radio" name="q_\( {examId}_ \){qIdx}" value="${oIdx}"> ${opt}</label>`;
+                html += `<label class="exam-option"><input type="radio" name="q_${examId}_${qIdx}" value="${oIdx}"> ${opt}</label>`;
               });
             });
             html += `<button class="btn-primary" style="margin-top:14px; padding:11px;"
-              onclick="submitExam('\( {examId}', ' \){(exam.title || '').replace(/'/g, "\\'")}')">تسليم الواجب</button></div>`;
+              onclick="submitExam('${examId}', '${(exam.title || '').replace(/'/g, "\\'")}')">تسليم الواجب</button></div>`;
             hwBox.innerHTML = html;
           } else {
             hwBox.innerHTML = '<div class="empty-state">الواجب المرتبط غير موجود</div>';
@@ -921,9 +911,17 @@
       lecBox.innerHTML = "";
       list.forEach(({ id, data: l }) => {
         const hasHw = l.examId ? ' • يوجد واجب' : '';
-        const thumb = l.image
-          ? `<img class="lec-thumb" src="${l.image}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="lec-thumb-placeholder" style="display:none;">🎬</div>`
+        // دعم الحقلين image و thumbnail وجلب الغلاف تلقائياً من رابط يوتيوب إن وجد
+        let thumbUrl = l.image || l.thumbnail;
+        if (!thumbUrl && l.video) {
+          const ytId = extractYoutubeId(l.video);
+          if (ytId) thumbUrl = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+        }
+
+        const thumb = thumbUrl
+          ? `<img class="lec-thumb" src="${thumbUrl}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="lec-thumb-placeholder" style="display:none;">🎬</div>`
           : `<div class="lec-thumb-placeholder">🎬</div>`;
+
         lecBox.innerHTML += `
           <div class="lec-card" onclick="openLecture('${id}')">
             ${thumb}
@@ -983,7 +981,7 @@
       let score = 0;
       const total = (examData.questions || []).length;
       examData.questions.forEach((q, qIdx) => {
-        const selected = document.querySelector(`input[name="q_\( {examId}_ \){qIdx}"]:checked`);
+        const selected = document.querySelector(`input[name="q_${examId}_${qIdx}"]:checked`);
         if (selected && parseInt(selected.value) === q.correct) score++;
       });
       try {
